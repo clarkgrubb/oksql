@@ -15,11 +15,18 @@ PostgreSQL.
 
 ## To Do ##
 
+* (DONE) use optparse and process arguments like psql does
+* format the output of a select like psql does
+* (DONE) don't exit upon SQL errors
+* align sql error message so caret ^ points at error in statement
+* implement the meta-commands
+* test under mac
+* startup file .psql-odbc-rc
+* parse sql to identify strings (multiple statments?
+  whether statment is a select?)
+* unit tests?
+* test under ruby 1.9
+* test under cygwin
 * abstract out netezza specific code
 * add a nzsql symlink
 * make psql-odbc aware of the name by which it was invoked
-* use argparse and process arguments like psql does
-* format the output of a select line psql does
-* implement the meta-commands
-* parse sql to identify strings (multiple statments?
-  whether statment is a select?)
