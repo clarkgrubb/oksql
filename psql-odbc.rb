@@ -29,12 +29,15 @@ class Psql
   class PsqlQuit < Exception; end
   class InvalidCommand < Exception; attr_accessor :command; end
   
-  attr_accessor :user, :password, :dsn, :connection
+  attr_accessor :user, :password, :dsn, :connection, :output
 
   SQL_COMMAND = Command.new('sql',
                             //,
                             '',
                             lambda { |psql, sql| psql.execute_sql(sql) })
+
+  #FIXME: make this a simple array which is processed
+  #FIXME: improve regexes to eliminate /cd, /d, /o pairs
   
   META_COMMANDS = []
   META_COMMANDS <<
@@ -42,6 +45,18 @@ class Psql
                 /\s*\\c\s+(\S+)/,
                 '\c <dsn>        connect to new data source name',
                 lambda { |psql, dsn| psql.connect(dsn) }
+                )
+  META_COMMANDS <<
+    Command.new('cd',
+                /\s*\\cd\s+(\S+)/,
+                '\cd <dir>       change the current working directory',
+                lambda { |psql, dir| Dir.chdir(dir) }
+                )
+  META_COMMANDS <<
+    Command.new('cd',
+                /\s*\\cd\b/,
+                nil,
+                lambda { |psql| Dir.chdir(ENV['HOME']) }
                 )
   META_COMMANDS <<
     Command.new('d',
@@ -56,6 +71,18 @@ class Psql
                 lambda { |psql| psql.describe_tables() }
                 )
   META_COMMANDS <<
+    Command.new('o',
+                /^\s*\\o\s+(\|.+|\S+)/,
+                '\o [file]       send all query results to [file], or |pipe',
+                lambda { |psql, file| psql.redirect_output(file) }
+                )
+  META_COMMANDS <<
+    Command.new('o',
+                /^\s*\\o\b/,
+                nil,
+                lambda { |psql| psql.output = $stdout }
+                )
+  META_COMMANDS <<
     Command.new('q',
                 /^\s*\\q\b/,
                 '\q              quit',
@@ -68,7 +95,6 @@ class Psql
                 lambda { |psql| psql.help }
                 )
   
-
   # FIXME: Netezza specific
   
   DESCRIBE_TABLE_SQL = 
@@ -80,16 +106,27 @@ class Psql
   def initialize(args)
     user = nil
     get_options(args)
+    self.output = $stdout
   end
 
   def help
     META_COMMANDS.each do |cmd|
-      puts cmd.help if cmd.help
+      output.puts cmd.help if cmd.help
     end
   end
   
   def connect(dsn=nil)
     self.connection = ODBC::Environment.new().connect(dsn || DSN, user, password)
+  end
+
+  def redirect_output(file)
+    md = /^\s*\|(.+)$/.match(file)
+    if md
+      cmd = md[1]
+      self.output = IO.popen(cmd, mode='w')
+    else
+      self.output = File.open(file,'w')
+    end
   end
   
   def get_options(args)
@@ -109,12 +146,12 @@ class Psql
     a.each_with_index do |o, i|
       display_me << "%-#{widths[i]}s" % o.to_s
     end
-    puts " " + display_me.join(' | ')
+    output.puts " " + display_me.join(' | ')
   end
 
   def print_bar(widths)
     display_me = widths.map { |w| '-' * w }
-    puts "-" + display_me.join('-+-') + "-"
+    output.puts "-" + display_me.join('-+-') + "-"
   end
   
   def print_header(columns, widths)
@@ -124,7 +161,7 @@ class Psql
 
   def print_footer(stmt)
     label = stmt.nrows == 1 ? 'row' : 'rows'
-    puts "(#{stmt.nrows} #{label})"
+    output.puts "(#{stmt.nrows} #{label})"
   end
 
   def get_columns(stmt)
@@ -164,7 +201,7 @@ class Psql
       print_array(row, widths)
     end
     print_footer(stmt) unless opts[:suppress_footer]
-    puts
+    output.puts
   end
 
   def select?(line)
@@ -205,7 +242,7 @@ class Psql
         print_rows(stmt) if select?(sql)
       end
     rescue ODBC::Error => e
-      puts e.to_s
+      $stderr.puts e.to_s
     ensure
       stmt.drop() if stmt
     end
@@ -230,10 +267,10 @@ class Psql
   def describe_table(table)
     execute_sql(DESCRIBE_TABLE_SQL, table) do |stmt, sql, *bind_vars|
       if stmt.nrows == 0
-        puts "Did not find any relation named \"#{table}\"."
+        output.puts "Did not find any relation named \"#{table}\"."
       else
         # FIXME: measure to center this nicely:
-        puts "       Table \"#{table}\""
+        output.puts "       Table \"#{table}\""
         print_rows(stmt, :suppress_footer => true)
       end
     end
@@ -242,10 +279,10 @@ class Psql
   def describe_tables
     execute_sql(DESCRIBE_TABLES_SQL) do |stmt, sql|
       if stmt.nrows == 0
-        puts "No relations found."
+        output.puts "No relations found."
       else
         # FIXME: center title
-        puts "      List of relations"
+        output.puts "      List of relations"
         print_rows(stmt)
       end
     end
@@ -276,10 +313,10 @@ class Psql
         break unless cmd
         cmd.action.call(self, *args)
       rescue Interrupt
-        puts
+        output.puts
         next
       rescue InvalidCommand => e
-        puts "Invalid command #{e.command}.  Try \\? for help."
+        $stderr.puts "Invalid command #{e.command}.  Try \\? for help."
       rescue PsqlQuit
         break
       end

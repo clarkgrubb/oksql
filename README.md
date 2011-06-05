@@ -19,25 +19,33 @@ PostgreSQL.
 * (DONE) format the output of a select like psql does
 * (DONE) don't exit upon SQL errors
 * (DONE) not using the prompt provided pw?
-* align sql error message so caret ^ points at error in statement
+* (IMPOSSIBLE) align sql error message so caret ^ points at error in statement
 * implement the meta-commands
   * (DONE) \d table
   * (DONE) \d (list all tables)
   * (DONE) \q
   * (DONE) \c
   * (DONE) \? help
-  * \o (file or pipe)
+  * (DONE) \o (file or pipe)
   * \i
   * \!
-* ability to set field separator
-* ability to suppress footer
-* 100 ROWS LIMITATION
+  * (DONE) \cd
+  * \t (show only rows)
+  * \f VALUE (show/set field separator)
+  * \a aligned/unaligned output toggle
+* query buffer commands
+  * \e [file]         (edit query buffer)
+  * \g [file] or pipe (run query buffer)
+  * \r clear query buffer
+  * \w <file> write query buffer
+* 100 ROWS LIMITATION (use first 100 for size, then let longer fields overflow)
+* pager
 * usage
 * test under mac
 * startup file .psql-odbc-rc
-* parse sql to identify strings (multiple statments?
-  whether statment is a select?)
-* unit tests?
+* parse sql to identify multiple statements
+* parse sql to identify whether statement is a select
+* unit tests
 * test under ruby 1.9
 * test under cygwin
 * abstract out netezza specific code
