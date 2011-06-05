@@ -27,8 +27,9 @@ end
 class Psql
 
   class PsqlQuit < Exception; end
+  class InvalidCommand < Exception; attr_accessor :command; end
   
-  attr_accessor :user, :password, :database, :connection
+  attr_accessor :user, :password, :dsn, :connection
 
   SQL_COMMAND = Command.new('sql',
                             //,
@@ -36,6 +37,12 @@ class Psql
                             lambda { |psql, sql| psql.execute_sql(sql) })
   
   META_COMMANDS = []
+  META_COMMANDS <<
+    Command.new('c',
+                /\s*\\c\s+(\S+)/,
+                "\c[onnect] [dsn [user] [password]] connect to new data source name",
+                lambda { |psql, dsn| psql.connect(dsn) }
+                )
   META_COMMANDS <<
     Command.new('d',
                 /^\s*\\d\s+(\S+)/,
@@ -58,15 +65,15 @@ class Psql
     get_options(args)
   end
 
-  def connect
-    self.connection = ODBC::Environment.new().connect(DSN, user, password)
+  def connect(dsn=nil)
+    self.connection = ODBC::Environment.new().connect(dsn || DSN, user, password)
   end
   
   def get_options(args)
     opts = OptionParser.new
-    opts.on("-d", "--dbname DBNAME") { |db| database = db }
-    opts.on("-U", "--username USER") { |u| user = u }
-    opts.on("-w", "--password") { password = get_password() }
+    opts.on("-d", "--dsn DSN") { |d| self.dsn = d }
+    opts.on("-U", "--username USER") { |u| self.user = u }
+    opts.on("-w", "--password") { self.password = get_password() }
     opts.parse(*args)
   end
   
@@ -188,6 +195,12 @@ class Psql
         return cmd, md.captures, md.post_match
       end
     end
+    md = /\s*(\\S*)/.match(line)
+    if md
+      invalid = InvalidCommand.new()
+      invalid.command = md[1]
+      raise invalid
+    end
     nil
   end
 
@@ -206,8 +219,11 @@ class Psql
   def get_command
     line = ''
     while part = Readline.readline(line.size > 0 ? "#{$user}-> " : "#{$user}=> ", true)
-    line += part + "\n"
-      cmd, args, rest = get_metacommand(line)
+      line += part + "\n"
+      md = /\s*(\\\S*)/.match(line)
+      if md
+        cmd, args, rest = get_metacommand(line)
+      end
       if cmd
         return cmd, args, rest
       end
@@ -227,6 +243,8 @@ class Psql
       rescue Interrupt
         puts
         next
+      rescue InvalidCommand => e
+        puts "Invalid command #{e.command}.  Try \\? for help."
       rescue PsqlQuit
         break
       end
@@ -237,6 +255,6 @@ end
 
 if $0 == __FILE__
   psql = Psql.new(ARGV)
-  psql.connect()
+  psql.connect(psql.dsn)
   psql.repl()
 end
