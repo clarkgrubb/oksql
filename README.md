@@ -18,6 +18,7 @@ PostgreSQL.
 * (DONE) use optparse and process arguments like psql does
 * format the output of a select like psql does
 * (DONE) don't exit upon SQL errors
+* not using the prompt provided pw?
 * align sql error message so caret ^ points at error in statement
 * implement the meta-commands
 * test under mac
