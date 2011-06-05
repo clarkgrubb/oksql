@@ -21,11 +21,13 @@ class Command
     self.help = h
     self.action = a
   end
-
+  
 end
 
 class Psql
 
+  class PsqlQuit < Exception; end
+  
   attr_accessor :user, :password, :database, :connection
 
   SQL_COMMAND = Command.new('sql',
@@ -34,12 +36,20 @@ class Psql
                             lambda { |psql, sql| psql.execute_sql(sql) })
   
   META_COMMANDS = []
-  META_COMMANDS << Command.new('d',
-                               /^\s*\\d\s+(\S+)/,
-                               "\d <table>      describe table (or view, index, sequence, synonym)",
-                               lambda { |psql, table| psql.describe_table(table.upcase) }
-                               )
+  META_COMMANDS <<
+    Command.new('d',
+                /^\s*\\d\s+(\S+)/,
+                "\d <table>      describe table (or view, index, sequence, synonym)",
+                lambda { |psql, table| psql.describe_table(table.upcase) }
+                )
+  META_COMMANDS <<
+    Command.new('q',
+                /^\s*\\q\b/,
+                "\q              quit",
+                lambda { |psql| raise PsqlQuit.new }
+                )
 
+  
   DESCRIBE_TABLE_SQL = 
     "select column_name as \"Column\", type_name as \"Type\", case nullable when 0 then '' else 'not null' end as \"Modifiers\" from _v_sys_columns where table_name = ? order by ordinal_position;"
   
@@ -205,17 +215,28 @@ class Psql
         return SQL_COMMAND, [line], nil
       end
     end
+    nil
   end
   
   def repl
     loop do
-      cmd, args, line = get_command()
-      cmd.action.call(self, *args)
+      begin
+        cmd, args, line = get_command()
+        break unless cmd
+        cmd.action.call(self, *args)
+      rescue Interrupt
+        puts
+        next
+      rescue PsqlQuit
+        break
+      end
     end
   end
   
 end
 
-psql = Psql.new(ARGV)
-psql.connect()
-psql.repl()
+if $0 == __FILE__
+  psql = Psql.new(ARGV)
+  psql.connect()
+  psql.repl()
+end

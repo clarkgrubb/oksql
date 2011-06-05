@@ -16,11 +16,23 @@ PostgreSQL.
 ## To Do ##
 
 * (DONE) use optparse and process arguments like psql does
-* format the output of a select like psql does
+* (DONE) format the output of a select like psql does
 * (DONE) don't exit upon SQL errors
 * not using the prompt provided pw?
 * align sql error message so caret ^ points at error in statement
 * implement the meta-commands
+  * (DONE) \d table
+  * \d (list all tables)
+  * (DONE) \q
+  * \c
+  * \o (file or pipe)
+  * \i
+  * \!
+* ability to set field separator
+* ability to suppress footer
+* help \?
+* 100 ROWS LIMITATION
+* usage
 * test under mac
 * startup file .psql-odbc-rc
 * parse sql to identify strings (multiple statments?
