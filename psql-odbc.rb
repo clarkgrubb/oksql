@@ -40,31 +40,54 @@ class Psql
   META_COMMANDS <<
     Command.new('c',
                 /\s*\\c\s+(\S+)/,
-                "\c[onnect] [dsn [user] [password]] connect to new data source name",
+                '\c <dsn>        connect to new data source name',
                 lambda { |psql, dsn| psql.connect(dsn) }
                 )
   META_COMMANDS <<
     Command.new('d',
                 /^\s*\\d\s+(\S+)/,
-                "\d <table>      describe table (or view, index, sequence, synonym)",
+                '\d <table>      describe table (or view, index, sequence)',
                 lambda { |psql, table| psql.describe_table(table.upcase) }
+                )
+  META_COMMANDS <<
+    Command.new('d',
+                /^\s*\\d\b/,
+                nil,
+                lambda { |psql| psql.describe_tables() }
                 )
   META_COMMANDS <<
     Command.new('q',
                 /^\s*\\q\b/,
-                "\q              quit",
+                '\q              quit',
                 lambda { |psql| raise PsqlQuit.new }
                 )
+  META_COMMANDS <<
+    Command.new('?',
+                /^\s*\\\?/,
+                nil,
+                lambda { |psql| psql.help }
+                )
+  
 
+  # FIXME: Netezza specific
   
   DESCRIBE_TABLE_SQL = 
     "select column_name as \"Column\", type_name as \"Type\", case nullable when 0 then '' else 'not null' end as \"Modifiers\" from _v_sys_columns where table_name = ? order by ordinal_position;"
+
+  DESCRIBE_TABLES_SQL =
+    "select database, objname as name, objtype as \"type\", owner from _v_sys_relation where objtype in ( 'TABLE', 'VIEW', 'SEQUENCE' ) order by 2;"
   
   def initialize(args)
     user = nil
     get_options(args)
   end
 
+  def help
+    META_COMMANDS.each do |cmd|
+      puts cmd.help if cmd.help
+    end
+  end
+  
   def connect(dsn=nil)
     self.connection = ODBC::Environment.new().connect(dsn || DSN, user, password)
   end
@@ -212,6 +235,18 @@ class Psql
         # FIXME: measure to center this nicely:
         puts "       Table \"#{table}\""
         print_rows(stmt, :suppress_footer => true)
+      end
+    end
+  end
+
+  def describe_tables
+    execute_sql(DESCRIBE_TABLES_SQL) do |stmt, sql|
+      if stmt.nrows == 0
+        puts "No relations found."
+      else
+        # FIXME: center title
+        puts "      List of relations"
+        print_rows(stmt)
       end
     end
   end
