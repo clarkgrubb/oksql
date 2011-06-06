@@ -6,6 +6,7 @@ require 'odbc'
 require 'optparse'
 require 'pp'
 require 'readline'
+require File.dirname(__FILE__) + '/sql_parse.rb'
 
 DSN = 'NZSQL'
 HBAR = '*' * 50
@@ -36,64 +37,65 @@ class Psql
                             '',
                             lambda { |psql, sql| psql.execute_sql(sql) })
 
-  #FIXME: make this a simple array which is processed
   #FIXME: improve regexes to eliminate /cd, /d, /o pairs
-  
+
   META_COMMANDS = []
-  META_COMMANDS <<
-    Command.new('c',
-                /\s*\\c\s+(\S+)/,
-                '\c <dsn>        connect to new data source name',
-                lambda { |psql, dsn| psql.connect(dsn) }
-                )
-  META_COMMANDS <<
-    Command.new('cd',
-                /\s*\\cd\s+(\S+)/,
-                '\cd <dir>       change the current working directory',
-                lambda { |psql, dir| Dir.chdir(dir) }
-                )
-  META_COMMANDS <<
-    Command.new('cd',
-                /\s*\\cd\b/,
-                nil,
-                lambda { |psql| Dir.chdir(ENV['HOME']) }
-                )
-  META_COMMANDS <<
-    Command.new('d',
-                /^\s*\\d\s+(\S+)/,
-                '\d <table>      describe table (or view, index, sequence)',
-                lambda { |psql, table| psql.describe_table(table.upcase) }
-                )
-  META_COMMANDS <<
-    Command.new('d',
-                /^\s*\\d\b/,
-                nil,
-                lambda { |psql| psql.describe_tables() }
-                )
-  META_COMMANDS <<
-    Command.new('o',
-                /^\s*\\o\s+(\|.+|\S+)/,
-                '\o [file]       send all query results to [file], or |pipe',
-                lambda { |psql, file| psql.redirect_output(file) }
-                )
-  META_COMMANDS <<
-    Command.new('o',
-                /^\s*\\o\b/,
-                nil,
-                lambda { |psql| psql.output = $stdout }
-                )
-  META_COMMANDS <<
-    Command.new('q',
-                /^\s*\\q\b/,
-                '\q              quit',
-                lambda { |psql| raise PsqlQuit.new }
-                )
-  META_COMMANDS <<
-    Command.new('?',
-                /^\s*\\\?/,
-                nil,
-                lambda { |psql| psql.help }
-                )
+  
+  [[
+    'c',
+    /\s*\\c\s+(\S+)/,
+    '\c <dsn>        connect to new data source name',
+    lambda { |psql, dsn| psql.connect(dsn) }
+   ],
+   [
+    'cd',
+    /\s*\\cd\s+(\S+)/,
+    '\cd <dir>       change the current working directory',
+    lambda { |psql, dir| Dir.chdir(dir) }
+   ],
+   [
+    'cd',
+    /\s*\\cd\b/,
+    nil,
+    lambda { |psql| Dir.chdir(ENV['HOME']) }
+   ],
+   [
+    'd',
+    /^\s*\\d\s+(\S+)/,
+    '\d <table>      describe table (or view, index, sequence)',
+    lambda { |psql, table| psql.describe_table(table.upcase) }
+   ],
+   [
+    'd',
+    /^\s*\\d\b/,
+    nil,
+    lambda { |psql| psql.describe_tables() }
+   ],
+   [
+    'o',
+    /^\s*\\o\s+(\|.+|\S+)/,
+    '\o [file]       send all query results to [file], or |pipe',
+    lambda { |psql, file| psql.redirect_output(file) }
+   ],
+   [
+    'o',
+    /^\s*\\o\b/,
+    nil,
+    lambda { |psql| psql.output = $stdout }
+   ],
+   [
+    'q',
+    /^\s*\\q\b/,
+    '\q              quit',
+    lambda { |psql| raise PsqlQuit.new }
+   ],
+   [
+    '?',
+    /^\s*\\\?/,
+    nil,
+    lambda { |psql| psql.help }
+   ]
+  ].each { |a| META_COMMANDS << Command.new(*a) }
   
   # FIXME: Netezza specific
   
