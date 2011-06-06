@@ -44,6 +44,14 @@ class SqlParse
       end
       @keyword
     end
+
+    def object
+      retval = nil
+      if [:create, :drop, :truncate, :alter].include?(keyword)
+        retval = /^temp/i.match(values[1]) ? values[2] : values[1]
+      end
+      retval || ''
+    end
     
     def open?
       not :meta_command == keyword and

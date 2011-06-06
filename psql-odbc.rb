@@ -35,7 +35,7 @@ class Psql
   SQL_COMMAND = Command.new('sql',
                             //,
                             '',
-                            lambda { |psql, sql| psql.execute_sql(sql) })
+                            lambda { |psql, sql, keyword, object| psql.execute_sql(sql, keyword, object) })
 
   INVALID_COMMAND = Command.new('invalid',
                                 //,
@@ -240,7 +240,33 @@ class Psql
     end
   end
 
-  def execute_sql(sql, *bind_vars)
+  def print_status(stmt, keyword, object)
+    object = object.strip.upcase
+    case keyword
+    when :insert
+      # FIXME: if a single row is inserted into a table with an OID
+      #        the first number is supposed to be the OID.
+      output.puts "INSERT 0 #{stmt.nrows}"
+    when :update
+      output.puts "UPDATE #{stmt.nrows}"
+    when :delete
+      output.puts "DELETE #{stmt.nrows}"
+    when :create
+      output.puts "CREATE #{object}"
+    when :drop
+      output.puts "DROP #{object}"
+    when :alter
+      output.puts "ALTER #{object}"
+    when :truncate
+      output.puts "TRUNCATE #{object}"
+    when :grant
+      output.puts "GRANT"
+    when :revoke
+      output.puts "REVOKE"
+    end
+  end
+  
+  def execute_sql(sql, keyword, object, *bind_vars)
     begin
       stmt = connection.run(sql, *bind_vars)
       # inspect_statement(stmt)
@@ -249,6 +275,7 @@ class Psql
       else
         print_rows(stmt) if select?(sql)
       end
+      print_status(stmt, keyword, object)
     rescue ODBC::Error => e
       $stderr.puts e.to_s
     ensure
@@ -257,7 +284,7 @@ class Psql
   end
 
   def describe_table(table)
-    execute_sql(DESCRIBE_TABLE_SQL, table) do |stmt, sql, *bind_vars|
+    execute_sql(DESCRIBE_TABLE_SQL, :unknown, '',  table) do |stmt, sql, *bind_vars|
       if stmt.nrows == 0
         output.puts "Did not find any relation named \"#{table}\"."
       else
@@ -269,7 +296,7 @@ class Psql
   end
 
   def describe_tables
-    execute_sql(DESCRIBE_TABLES_SQL) do |stmt, sql|
+    execute_sql(DESCRIBE_TABLES_SQL, :unknown, '') do |stmt, sql|
       if stmt.nrows == 0
         output.puts "No relations found."
       else
@@ -289,7 +316,7 @@ class Psql
     end
     md = /\s*(\S+)/.match(line)
     bad_command =  md ? md[1] : '?'
-    return SQL_COMMAND, [bad_command], line
+    return INVALID_COMMAND, [bad_command], line
   end
 
   def get_parsed_line
@@ -311,7 +338,7 @@ class Psql
         cmd, args, unused_args = get_metacommand(stmt.raw)
         pairs << [cmd, args]
       else
-        pairs << [SQL_COMMAND, [stmt.raw]]
+        pairs << [SQL_COMMAND, [stmt.raw, stmt.keyword, stmt.object]]
       end
     end
     pairs

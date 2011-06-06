@@ -24,22 +24,23 @@ PostgreSQL.
 * (DONE) make parser aware of commas and the *
 * (DONE) ability to mix sql and meta-commands, separated by semicolons
 * (DONE) must be whitespace between meta-command and semicolon
-* cleanup meta_command regexes
-* modify psql so that unit tests can send input and capture output
-* parse sql to identify whether statement is a select.  display appropriate msg for non-selects
 * lift 100 ROWS LIMITATION (use first 100 for size, then let longer fields overflow)
-* CRUD output:
- * INSERT 0 1 (explanation of first number: If count is exactly one, and the target table has OIDs, then oid is the OID assigned to the inserted row. Otherwise oid is zero.)
- * UPDATE 2
- * DELETE 2
-* CREATE output:
-  * CREATE TABLE
-  * DROP TABLE
-  * ALTER TABLE
-  * TRUNCATE TABLE
-* GRANT output
-  * GRANT
-  * REVOKE
+* modify psql so that unit tests can send input and capture output
+* cleanup meta_command regexes
+* cleanup signature of execute_sql
+* (DONE) parse sql to identify whether statement is a select.  display appropriate msg for non-selects
+* (DONE) CRUD output:
+ * (DONE) INSERT 0 1 (explanation of first number: If count is exactly one, and the target table has OIDs, then oid is the OID assigned to the inserted row. Otherwise oid is zero.)
+ * (DONE) UPDATE 2
+ * (DONE) DELETE 2
+* (DONE) CREATE output:
+  * (DONE) CREATE TABLE
+  * (DONE) DROP TABLE
+  * (DONE) ALTER TABLE
+  * (DONE) TRUNCATE TABLE
+* (DONE) GRANT output
+  * (DONE) GRANT
+  * (DONE) REVOKE
 * implement the meta-commands
   * (DONE) \d table
   * (DONE) \d (list all tables)
