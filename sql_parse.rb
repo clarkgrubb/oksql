@@ -36,6 +36,8 @@ class SqlParse
         first_value = (values.first || '').downcase
         if :keyword_or_variable ==  tokens.first
           @keyword = KEYWORDS[first_value] || :unknown
+        elsif :meta_command == tokens.first
+          @keyword = :meta_command
         else
           @keyword = :unknown
         end
@@ -44,7 +46,11 @@ class SqlParse
     end
     
     def open?
-      @open_quote or not @semicolon_terminated or not open_parens.empty?
+      not :meta_command == keyword and
+        (
+         @open_quote or
+         not @semicolon_terminated or
+         not open_parens.empty? )
     end
 
     def open_parens
@@ -72,7 +78,7 @@ class SqlParse
     
   end
   
-  def initialize
+  def initialize()
     @lexer = SqlLex.new()
   end
 
@@ -89,11 +95,14 @@ class SqlParse
       stmt.tokens << token
       stmt.values << value
       stmt.raw += raw
-      if :open == token
+      case token
+      when :meta_command
+        stmts << stmt
+        stmt = nil
+      when :open
         stmt.open_quote = value
         break
-      end
-      if :semicolon == token
+      when :semicolon 
         stmt.semicolon_terminated = true
         stmts << stmt
         stmt = nil

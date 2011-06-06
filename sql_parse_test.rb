@@ -132,5 +132,31 @@ class SqlParseTest < Test::Unit::TestCase
     assert_equal(:unknown, stmt.keyword)
     assert_equal(" 1 + 7;", stmt.raw)
   end
+
+  # meta command
+  def test_11
+    stmts = @sql.parse(' \d foo ')
+    assert_equal(1, stmts.size)
+    stmt = stmts[0]
+    assert(!stmt.open?)
+    assert_equal(:meta_command, stmt.keyword)
+    assert_equal(' \d foo ', stmt.raw)
+  end
+
+  # meta command and sql command
+  def test_12
+    stmts = @sql.parse(' \d foo ; select \'foo\'; ')
+    assert_equal(2, stmts.size)
+
+    stmt1 = stmts[0]
+    assert(!stmt1.open?)
+    assert_equal(:meta_command, stmt1.keyword)
+    assert_equal(' \d foo ;', stmt1.raw)
+
+    stmt2 = stmts[1]
+    assert(!stmt2.open?)
+    assert_equal(:select, stmt2.keyword)
+    assert_equal(" select 'foo';", stmt2.raw)
+  end
   
 end
