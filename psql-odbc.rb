@@ -37,6 +37,11 @@ class Psql
                             '',
                             lambda { |psql, sql| psql.execute_sql(sql) })
 
+  INVALID_COMMAND = Command.new('invalid',
+                                //,
+                                '',
+                                lambda { |psql, cmd| psql.output.puts "Invalid Command #{cmd}. Try \\? for help."})
+  
   #FIXME: improve regexes to eliminate /cd, /d, /o pairs
 
   META_COMMANDS = []
@@ -49,7 +54,7 @@ class Psql
    ],
    [
     'cd',
-    /\s*\\cd\s+(\S+)/,
+    /\s*\\cd\s+([^ \t;]+)/,
     '\cd <dir>       change the current working directory',
     lambda { |psql, dir| Dir.chdir(dir) }
    ],
@@ -61,7 +66,7 @@ class Psql
    ],
    [
     'd',
-    /^\s*\\d\s+(\S+)/,
+    /^\s*\\d\s+([^ \t;]+)/,
     '\d <table>      describe table (or view, index, sequence)',
     lambda { |psql, table| psql.describe_table(table.upcase) }
    ],
@@ -73,7 +78,7 @@ class Psql
    ],
    [
     'o',
-    /^\s*\\o\s+(\|.+|\S+)/,
+    /^\s*\\o\s+(\|.+|[^ \t;]+)/,
     '\o [file]       send all query results to [file], or |pipe',
     lambda { |psql, file| psql.redirect_output(file) }
    ],
@@ -109,6 +114,7 @@ class Psql
     user = nil
     get_options(args)
     self.output = $stdout
+    @parser = SqlParse.new()
   end
 
   def help
@@ -250,22 +256,6 @@ class Psql
     end
   end
 
-  def get_metacommand(line)
-    META_COMMANDS.each do |cmd|
-      md = cmd.regex.match(line)
-      if md
-        return cmd, md.captures, md.post_match
-      end
-    end
-    md = /\s*(\\S*)/.match(line)
-    if md
-      invalid = InvalidCommand.new()
-      invalid.command = md[1]
-      raise invalid
-    end
-    nil
-  end
-
   def describe_table(table)
     execute_sql(DESCRIBE_TABLE_SQL, table) do |stmt, sql, *bind_vars|
       if stmt.nrows == 0
@@ -290,30 +280,51 @@ class Psql
     end
   end
   
-  def get_command
-    line = ''
-    while part = Readline.readline(line.size > 0 ? "#{$user}-> " : "#{$user}=> ", true)
-      line += part + "\n"
-      md = /\s*(\\\S*)/.match(line)
+  def get_metacommand(line)
+    META_COMMANDS.each do |cmd|
+      md = cmd.regex.match(line)
       if md
-        cmd, args, rest = get_metacommand(line)
-      end
-      if cmd
-        return cmd, args, rest
-      end
-      if /;\s*\Z/.match(line)
-        return SQL_COMMAND, [line], nil
+        return cmd, md.captures, md.post_match
       end
     end
-    nil
+    md = /\s*(\S+)/.match(line)
+    bad_command =  md ? md[1] : '?'
+    return SQL_COMMAND, [bad_command], line
+  end
+
+  def get_parsed_line
+    line = ''
+    continuation_char = '='
+    while part = Readline.readline("#{user}#{continuation_char}> ", true)
+      line += part + "\n"
+      stmts = @parser.parse(line)
+      return stmts if not stmts.last.open?
+      continuation_char = stmts.last.open_delimiter || '-'
+    end
+  end
+  
+  def get_command_arguments_pairs
+    pairs = []
+    stmts = get_parsed_line || []
+    stmts.each do |stmt|
+      if :meta_command == stmt.keyword
+        cmd, args, unused_args = get_metacommand(stmt.raw)
+        pairs << [cmd, args]
+      else
+        pairs << [SQL_COMMAND, [stmt.raw]]
+      end
+    end
+    pairs
   end
   
   def repl
     loop do
       begin
-        cmd, args, line = get_command()
-        break unless cmd
-        cmd.action.call(self, *args)
+        pairs = get_command_arguments_pairs()
+        break if pairs.empty?
+        pairs.each do |cmd, args|
+          cmd.action.call(self, *args)
+        end
       rescue Interrupt
         output.puts
         next
