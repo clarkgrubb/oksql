@@ -241,5 +241,34 @@ class SqlLexTest < Test::Unit::TestCase
       end
     end
   end
-   
+
+  # meta_command
+  def test_21
+    token, value, raw, rest = @sql.lex(' \d foo')
+    assert_equal(:meta_command, token)
+    assert_equal('\d foo', value)
+    assert_equal(' \d foo', raw)
+    assert_equal('', rest)
+
+  end
+
+  # meta command and semicolon preceded by whitespace
+  def test_22
+    token, value, raw, rest = @sql.lex(' \d foo ; select \'foo\';')
+    assert_equal(:meta_command, token)
+    assert_equal('\d foo ;', value)
+    assert_equal(' \d foo ;', raw)
+    assert_equal(' select \'foo\';', rest)
+  end
+  
+
+  # meta command and semicolon non preceded by whitespace
+  def test_23
+    token, value, raw, rest = @sql.lex(' \d foo; select \'foo\';')
+    assert_equal(:meta_command, token)
+    assert_equal('\d foo; select \'foo\';', value)
+    assert_equal(' \d foo; select \'foo\';', raw)
+    assert_equal('', rest)
+  end
+
 end

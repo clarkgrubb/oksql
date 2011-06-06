@@ -4,12 +4,13 @@ class SqlLex
 
   # These are not precise
   KEYWORD_OR_VARIABLE_REGEX = '[a-zA-Z][a-zA-Z_0-9]*'
-  OPERATOR_REGEX = '[+\-*\/%\|]+'
+  OPERATOR_REGEX = '[+\-*\/%\|,]+'
   INTEGER_REGEX = '-?[0-9]+'
   FLOAT_REGEX = '-?[0-9]+\.[0-9]*|-?[0-9]*\.[0-9]+'
   UNKNOWN_REGEX = '\S+'
+  META_COMMAND_REGEX = '\\\\.*?\s;|\\\\.*$'
   
-  def initialize
+  def initialize()
   end
   
   def lex_comment(input)
@@ -26,6 +27,9 @@ class SqlLex
       token, value, raw_rest, rest = lex_quoted_variable(raw_rest)
       rest = '"' + rest if :open == token
       return token, value, raw_prefix + raw_rest, rest
+    when /\A(\s*)(#{META_COMMAND_REGEX})/
+      postmatch = $'
+      return :meta_command, $2, $1 + $2, $'
     when /\A(\s*)(#{KEYWORD_OR_VARIABLE_REGEX})/
       return :keyword_or_variable, $2, $1 + $2, $'
     when /\A(\s*)(#{FLOAT_REGEX})/
