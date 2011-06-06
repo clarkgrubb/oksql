@@ -39,6 +39,7 @@ PostgreSQL.
   * \r clear query buffer
   * \w <file> write query buffer
 * 100 ROWS LIMITATION (use first 100 for size, then let longer fields overflow)
+* tab completion? table names, column names
 * pager
 * usage
 * test under mac
@@ -48,6 +49,7 @@ PostgreSQL.
 * unit tests
 * test under ruby 1.9
 * test under cygwin
+* run under windows (with no readline?)
 * abstract out netezza specific code
 * add a nzsql symlink
 * make psql-odbc aware of the name by which it was invoked
