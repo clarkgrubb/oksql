@@ -56,32 +56,32 @@ class Psql
   
   [[
     'a',
-    /\s*\\a\b/,
+    /^\s*\\a\b/,
     '\a              toggle whether column output is aligned',
     lambda { |psql| psql.toggle_alignment }
    ],
    [
     'c',
-    /\s*\\c\s+(\S+)/,
+    /^\s*\\c\s+(\S+)/,
     '\c <dsn>        connect to new data source name',
     lambda { |psql, dsn| psql.connect(dsn) }
    ],
    [
     'cd',
-    /\s*\\cd\s+([^ \t;]+)/,
+    /^\s*\\cd\s+([^ \t;]+)/,
     '\cd <dir>       change the current working directory',
     lambda { |psql, dir| Dir.chdir(dir) }
    ],
    [
     'cd',
-    /\s*\\cd\b/,
+    /^\s*\\cd\b/,
     nil,
     lambda { |psql| Dir.chdir(ENV['HOME']) }
    ],
    [
     'd',
     /^\s*\\d\s+([^ \t;]+)/,
-    '\d <table>      describe table (or view, index, sequence)',
+    '\d <table>      describe table (or view, sequence)',
     lambda { |psql, table| psql.describe_table(table.upcase) }
    ],
    [
@@ -92,15 +92,27 @@ class Psql
    ],
    [
     'f',
-    /\s*\\f\s+(.*)/,
-    '\f <sep>        set field separator', 
+    /^\s*\\f\s+(.*)/,
+    '\f [sep]        set or show field separator', 
     lambda { |psql, fs| psql.set_field_separator(fs) }
    ],
    [
     'f',
-    /\s*\\f\b/,
-    '\f              show field separator',
+    /^\s*\\f\b/,
+    nil,
     lambda { |psql| psql.show_field_separator }
+   ],
+   [
+    'i',
+    /^\s*\\i\s*(\S+)/,
+    '\i <file>       read input from file and execute it',
+    lambda { |psql, file| psql.execute_file(file) }
+   ],
+   [
+    'i',
+    /^\s*\\i\b/,
+    nil,
+    lambda { |psql| $stderr.puts "\\i: missing required argument" }
    ],
    [
     'o',
@@ -231,7 +243,6 @@ class Psql
       separator = @field_separator
       pad = ''
     end
-    pp widths
     display_me = []
     a.each_with_index do |o, i|
       display_me << "%-#{widths[i]}s" % o.to_s
@@ -404,7 +415,7 @@ class Psql
       output.puts "REVOKE"
     end
   end
-  
+
   def execute_sql(sql, keyword, object, *bind_vars)
     begin
       stmt = connection.run(sql, *bind_vars)
@@ -470,9 +481,9 @@ class Psql
     raise PsqlQuit.new()
   end
   
-  def get_command_arguments_pairs
+  def get_command_arguments_pairs(input)
     pairs = []
-    stmts = get_parsed_line || []
+    stmts = input || []
     stmts.each do |stmt|
       if :meta_command == stmt.keyword
         cmd, args, unused_args = get_metacommand(stmt.raw)
@@ -483,11 +494,23 @@ class Psql
     end
     pairs
   end
+
+  def execute_file(file)
+    begin
+      input = File.open(file).read()
+    rescue Errno::ENOENT
+      $stderr.puts "#{file}: No such file or directory"
+    end    
+    pairs = get_command_arguments_pairs(@parser.parse(input))
+    pairs.each do |cmd, args|
+      cmd.action.call(self, *args)
+    end
+  end
   
   def repl
     loop do
       begin
-        pairs = get_command_arguments_pairs()
+        pairs = get_command_arguments_pairs(get_parsed_line)
         next if pairs.empty?
         pairs.each do |cmd, args|
           cmd.action.call(self, *args)

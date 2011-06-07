@@ -47,7 +47,7 @@ PostgreSQL.
   * (DONE) \c
   * (DONE) \? help
   * (DONE) \o (file or pipe)
-  * \i
+  * (DONE) \i
   * (DONE) \\!
   * (DONE) \cd
   * (DONE) \t (show only rows)
@@ -74,6 +74,7 @@ PostgreSQL.
  * graphing data
 * emacs extension version?
 * package as gem
+* spaces in filenames for \i and \o?
 * usage
 * startup file .psql-odbc-rc
 * test under ruby 1.9
