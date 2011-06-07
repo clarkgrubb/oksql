@@ -48,16 +48,16 @@ PostgreSQL.
   * (DONE) \? help
   * (DONE) \o (file or pipe)
   * \i
-  * \!
+  * \\!
   * (DONE) \cd
   * \t (show only rows)
   * \f VALUE (show/set field separator)
   * \a aligned/unaligned output toggle
 * query buffer commands
-  * \e [file]         (edit query buffer)
-  * \g [file] or pipe (run query buffer)
+  * \e \[file\]         (edit query buffer)
+  * \g \[file\] or pipe (run query buffer)
   * \r clear query buffer
-  * \w <file> write query buffer
+  * \w \<file\> write query buffer
 * tab completion? table names, column names
 * modify psql so that unit tests can send input and capture output
 * cleanup meta_command regexes
