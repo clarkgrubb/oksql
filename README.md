@@ -48,11 +48,11 @@ PostgreSQL.
   * (DONE) \? help
   * (DONE) \o (file or pipe)
   * \i
-  * \\!
+  * (DONE) \\!
   * (DONE) \cd
-  * \t (show only rows)
-  * \f VALUE (show/set field separator)
-  * \a aligned/unaligned output toggle
+  * (DONE) \t (show only rows)
+  * (DONE) \f VALUE (show/set field separator)
+  * (DONE) \a aligned/unaligned output toggle
 * query buffer commands
   * \e \[file\]         (edit query buffer)
   * \g \[file\] or pipe (run query buffer)

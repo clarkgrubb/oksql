@@ -30,7 +30,7 @@ class Psql
   class PsqlQuit < Exception; end
   class InvalidCommand < Exception; attr_accessor :command; end
   
-  attr_accessor :user, :password, :dsn, :connection, :output
+  attr_accessor :user, :password, :dsn, :connection, :output, :align_columns
 
   SQL_LAMBDA = lambda do |psql, sql, keyword, object|
     psql.execute_sql(sql, keyword, object)
@@ -55,6 +55,12 @@ class Psql
   META_COMMANDS = []
   
   [[
+    'a',
+    /\s*\\a\b/,
+    '\a              toggle whether column output is aligned',
+    lambda { |psql| psql.toggle_alignment }
+   ],
+   [
     'c',
     /\s*\\c\s+(\S+)/,
     '\c <dsn>        connect to new data source name',
@@ -85,6 +91,18 @@ class Psql
     lambda { |psql| psql.describe_tables() }
    ],
    [
+    'f',
+    /\s*\\f\s+(.*)/,
+    '\f <sep>        set field separator', 
+    lambda { |psql, fs| psql.set_field_separator(fs) }
+   ],
+   [
+    'f',
+    /\s*\\f\b/,
+    '\f              show field separator',
+    lambda { |psql| psql.show_field_separator }
+   ],
+   [
     'o',
     /^\s*\\o\s+(\|.+|[^ \t;]+)/,
     '\o [file]       send all query results to [file], or |pipe',
@@ -101,6 +119,18 @@ class Psql
     /^\s*\\q\b/,
     '\q              quit',
     lambda { |psql| raise PsqlQuit.new }
+   ],
+   [
+    't',
+    /^\s*\\t\b/,
+    '\t              toggle whether to show only rows',
+    lambda { |psql| psql.toggle_show_only_rows }
+   ],
+   [
+    '!',
+    /^\s*\\\!(.*)/,
+    '\! [cmd]        shell escape or command',
+    lambda { |psql, cmd| system(cmd) }
    ],
    [
     '?',
@@ -123,8 +153,44 @@ class Psql
     get_options(args)
     self.output = $stdout
     @parser = SqlParse.new()
+    @show_only_rows = false
+    @align_columns = true
+    @field_separator = '|'
   end
 
+  def toggle_show_only_rows
+    @show_only_rows = ! @show_only_rows
+    if @show_only_rows
+      output.puts "Showing only tuples."
+    else
+      output.puts "Tuples only is off."
+    end
+  end
+
+  def toggle_alignment
+    @align_columns = ! @align_columns
+    output.puts "Output format is #{@align_columns ? '' : 'un'}aligned."
+  end
+
+  def show_field_separator
+    output.puts "Field separator is \"#{@field_separator}\"."
+  end
+
+  def set_field_separator(fs)
+    if fs[0..0] == "'"
+      lexer = SqlLex.new()
+      token, value, _, _ = lexer.lex_string(fs[1..-1])
+      if :open == token
+        output.puts "unterminated quoted string"
+      else
+        @field_separator = value
+      end
+    else
+      @field_separator = fs.split.first
+    end
+    show_field_separator
+  end
+  
   def help
     META_COMMANDS.each do |cmd|
       output.puts cmd.help if cmd.help
@@ -158,11 +224,19 @@ class Psql
   end
 
   def print_array(a, widths)
+    if @align_columns
+      separator = ' ' + @field_separator + ' '
+      pad = ' '
+    else
+      separator = @field_separator
+      pad = ''
+    end
+    pp widths
     display_me = []
     a.each_with_index do |o, i|
       display_me << "%-#{widths[i]}s" % o.to_s
     end
-    output.puts " " + display_me.join(' | ')
+    output.puts pad + display_me.join(separator)
   end
 
   def print_bar(widths)
@@ -172,7 +246,7 @@ class Psql
   
   def print_header(columns, widths)
     print_array(columns.map {|c| c.name}, widths)
-    print_bar(widths)
+    print_bar(widths) if @align_columns
   end
 
   def print_footer(stmt)
@@ -182,12 +256,14 @@ class Psql
     
   class Rows
 
-    def initialize(stmt)
+    def initialize(stmt, psql)
       @stmt = stmt
       @display_widths = nil
       @rows_for_alignment = nil
+      @psql = psql
     end
 
+    
     def display_widths
       @display_widths ||= get_display_widths
       @display_widths
@@ -221,12 +297,16 @@ class Psql
     end
 
     def get_display_widths
-      a = columns.map {|c| c.name.size }
-      @rows_for_alignment ||= prefetch_rows
-      @rows_for_alignment.each do |row|
-        row.each_with_index do |val, i|
-          if val.to_s.size > a[i]
-            a[i] = val.to_s.size
+      if !@psql.align_columns
+        a = columns.map {|c| 0 }
+      else
+        a = columns.map {|c| c.name.size }
+        @rows_for_alignment ||= prefetch_rows
+        @rows_for_alignment.each do |row|
+          row.each_with_index do |val, i|
+            if val.to_s.size > a[i]
+              a[i] = val.to_s.size
+            end
           end
         end
       end
@@ -235,12 +315,12 @@ class Psql
   end
 
   def _print_rows(stmt, opts={})
-    rows = Rows.new(stmt)
-    print_header(rows.columns, rows.display_widths)
+    rows = Rows.new(stmt, self)
+    print_header(rows.columns, rows.display_widths) unless @show_only_rows
     rows.each do |row|
       print_array(row, rows.display_widths)
     end
-    print_footer(stmt) unless opts[:suppress_footer]
+    print_footer(stmt) unless opts[:suppress_footer] or @show_only_rows
     output.puts
   end
 
