@@ -10,7 +10,7 @@ PostgreSQL.
 ## Installation ##
 
 * install ruby (including rubygems)
-* sudo gem install ruby-odbc
+* sudo gem install ruby-odbc highline
 * install the odbc driver for your database
 
 ## To Do ##
@@ -26,6 +26,7 @@ PostgreSQL.
 * (DONE) must be whitespace between meta-command and semicolon
 * (DONE) lift 100 ROWS LIMITATION (use first 100 for size, then let longer fields overflow)
 * (DONE) pager
+* (DONE) add a nzsql symlink
 * (DONE) parse sql to identify whether statement is a select.  display appropriate msg for non-selects
 * (DONE) CRUD output:
  * (DONE) INSERT 0 1 (explanation of first number: If count is exactly one, and the target table has OIDs, then oid is the OID assigned to the inserted row. Otherwise oid is zero.)
@@ -61,6 +62,7 @@ PostgreSQL.
 * modify psql so that unit tests can send input and capture output
 * cleanup meta_command regexes
 * cleanup signature of execute_sql
+* test under mac
 
 * extensions
  * \buffer <name>  # header: column names and types
@@ -73,13 +75,11 @@ PostgreSQL.
 * emacs extension version?
 * package as gem
 * usage
-* test under mac
 * startup file .psql-odbc-rc
 * test under ruby 1.9
 * test under cygwin
 * run under windows (with no readline?)
 * abstract out netezza specific code
-* add a nzsql symlink
 * make psql-odbc aware of the name by which it was invoked
 * test against other odbc databases
 * direct support for psql, mysql, sql server, sqllite, (oracle?)
