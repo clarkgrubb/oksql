@@ -10,7 +10,7 @@ require File.dirname(__FILE__) + '/sql_parse.rb'
 
 DSN = 'NZSQL'
 HBAR = '*' * 50
-MAX_ROWS = 100
+ROWS_FOR_ALIGNMENT = 100
 
 class Command
 
@@ -32,15 +32,23 @@ class Psql
   
   attr_accessor :user, :password, :dsn, :connection, :output
 
+  SQL_LAMBDA = lambda do |psql, sql, keyword, object|
+    psql.execute_sql(sql, keyword, object)
+  end
+
   SQL_COMMAND = Command.new('sql',
                             //,
                             '',
-                            lambda { |psql, sql, keyword, object| psql.execute_sql(sql, keyword, object) })
+                            SQL_LAMBDA)
 
+  INVALID_LAMBDA = lambda do |psql, cmd|
+    psql.output.puts "Invalid Command #{cmd}. Try \\? for help."
+  end
+  
   INVALID_COMMAND = Command.new('invalid',
                                 //,
                                 '',
-                                lambda { |psql, cmd| psql.output.puts "Invalid Command #{cmd}. Try \\? for help."})
+                                INVALID_LAMBDA)
   
   #FIXME: improve regexes to eliminate /cd, /d, /o pairs
 
@@ -171,45 +179,96 @@ class Psql
     label = stmt.nrows == 1 ? 'row' : 'rows'
     output.puts "(#{stmt.nrows} #{label})"
   end
-
-  def get_columns(stmt)
-    (0...stmt.ncols).map {|i| stmt.column(i) }
-  end
     
-  def get_rows(stmt)
-    if stmt.nrows <= MAX_ROWS
-      rows = stmt.fetch_all()
-    else
-      rows = []
-      MAX_ROWS.times do
-        rows << stmt.fetch()
-      end
-    end
-    rows
-  end
+  class Rows
 
-  def get_display_widths(columns, rows)
-    a = columns.map {|c| c.name.size }
-    rows.each do |row|
-      row.each_with_index do |val, i|
-        if val.to_s.size > a[i]
-          a[i] = val.to_s.size
+    def initialize(stmt)
+      @stmt = stmt
+      @display_widths = nil
+      @rows_for_alignment = nil
+    end
+
+    def display_widths
+      @display_widths ||= get_display_widths
+      @display_widths
+    end
+    
+    def columns
+      (0...@stmt.ncols).map {|i| @stmt.column(i) }
+    end
+
+    def prefetch_rows
+      if @stmt.nrows <= ROWS_FOR_ALIGNMENT
+        @rows_for_alignment = @stmt.fetch_all()
+      else
+        @rows_for_alignment = []
+        ROWS_FOR_ALIGNMENT.times do
+          @rows_for_alignment << @stmt.fetch()
         end
       end
+      @rows_for_alignment || []
     end
-    a
+    
+    def each
+      @rows_for_alignment ||= prefetch_rows
+      @rows_for_alignment.each do |row|
+        yield(row)
+      end
+      
+      while row = @stmt.fetch()
+        yield(row)
+      end
+    end
+
+    def get_display_widths
+      a = columns.map {|c| c.name.size }
+      @rows_for_alignment ||= prefetch_rows
+      @rows_for_alignment.each do |row|
+        row.each_with_index do |val, i|
+          if val.to_s.size > a[i]
+            a[i] = val.to_s.size
+          end
+        end
+      end
+      @display_widths = a
+    end
   end
-  
-  def print_rows(stmt, opts={})
-    columns = get_columns(stmt)
-    rows = get_rows(stmt) || []
-    widths = get_display_widths(columns, rows)
-    print_header(columns, widths)
+
+  def _print_rows(stmt, opts={})
+    rows = Rows.new(stmt)
+    print_header(rows.columns, rows.display_widths)
     rows.each do |row|
-      print_array(row, widths)
+      print_array(row, rows.display_widths)
     end
     print_footer(stmt) unless opts[:suppress_footer]
     output.puts
+  end
+
+  def _page_rows(stmt, opts={})
+    # less options:
+    #   -X suppress init and denit
+    #   -S chop long lines
+    #   -F don't page if less than a page
+    #
+    ENV['LESS'] = 'FX' # equivalent to: less -FX
+    pager = ENV['PAGER'] || 'less'
+    f = IO.popen(pager, 'w') 
+    begin
+      self.output = f
+      _print_rows(stmt, opts)
+    rescue Errno::EPIPE
+    ensure
+      self.output = $stdout
+      f.close
+    end
+  end
+  
+  def print_rows(stmt, opts={})
+    if self.output == $stdout and $stdout.isatty
+      _page_rows(stmt, opts)
+    else
+      _print_rows(stmt, opts)
+    end
   end
 
   def select?(line)
@@ -325,9 +384,10 @@ class Psql
     while part = Readline.readline("#{user}#{continuation_char}> ", true)
       line += part + "\n"
       stmts = @parser.parse(line)
-      return stmts if not stmts.last.open?
+      return stmts if stmts.empty? or not stmts.last.open?
       continuation_char = stmts.last.open_delimiter || '-'
     end
+    raise PsqlQuit.new()
   end
   
   def get_command_arguments_pairs
@@ -348,7 +408,7 @@ class Psql
     loop do
       begin
         pairs = get_command_arguments_pairs()
-        break if pairs.empty?
+        next if pairs.empty?
         pairs.each do |cmd, args|
           cmd.action.call(self, *args)
         end

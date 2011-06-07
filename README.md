@@ -24,10 +24,8 @@ PostgreSQL.
 * (DONE) make parser aware of commas and the *
 * (DONE) ability to mix sql and meta-commands, separated by semicolons
 * (DONE) must be whitespace between meta-command and semicolon
-* lift 100 ROWS LIMITATION (use first 100 for size, then let longer fields overflow)
-* modify psql so that unit tests can send input and capture output
-* cleanup meta_command regexes
-* cleanup signature of execute_sql
+* (DONE) lift 100 ROWS LIMITATION (use first 100 for size, then let longer fields overflow)
+* (DONE) pager
 * (DONE) parse sql to identify whether statement is a select.  display appropriate msg for non-selects
 * (DONE) CRUD output:
  * (DONE) INSERT 0 1 (explanation of first number: If count is exactly one, and the target table has OIDs, then oid is the OID assigned to the inserted row. Otherwise oid is zero.)
@@ -60,7 +58,9 @@ PostgreSQL.
   * \r clear query buffer
   * \w <file> write query buffer
 * tab completion? table names, column names
-* pager
+* modify psql so that unit tests can send input and capture output
+* cleanup meta_command regexes
+* cleanup signature of execute_sql
 
 * extensions
  * \buffer <name>  # header: column names and types
