@@ -363,7 +363,7 @@ class Psql
   end
 
   def select?(line)
-    /^\s*select/i.match(line)
+    /\A\s*select/i.match(line)
   end
 
   def inspect_methods(o, name)
