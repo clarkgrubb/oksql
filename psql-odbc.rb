@@ -210,7 +210,12 @@ class Psql
   end
   
   def connect(dsn=nil)
-    self.connection = ODBC::Environment.new().connect(dsn || DSN, user, password)
+    begin
+      self.connection = ODBC::Environment.new().connect(dsn || DSN, user, password)
+    rescue ODBC::Error => e
+      self.connection = nil
+      $stderr.puts "failed to connect to dsn: #{dsn}: #{e}"
+    end
   end
 
   def redirect_output(file)
@@ -417,6 +422,10 @@ class Psql
   end
 
   def execute_sql(sql, keyword, object, *bind_vars)
+    if connection.nil?
+      $stderr.puts "not connected to a db; use \c to connect"
+      return
+    end
     begin
       stmt = connection.run(sql, *bind_vars)
       # inspect_statement(stmt)
