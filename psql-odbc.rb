@@ -338,6 +338,7 @@ class Psql
     end
     print_footer(stmt) unless opts[:suppress_footer] or @show_only_rows
     output.puts
+    output.flush
   end
 
   def _page_rows(stmt, opts={})
