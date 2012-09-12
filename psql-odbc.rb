@@ -15,21 +15,21 @@ ROWS_FOR_ALIGNMENT = 100
 class Command
 
   attr_accessor :name, :regex, :help, :action
-  
+
   def initialize(n, r, h, a)
     self.name = n
     self.regex = r
     self.help = h
     self.action = a
   end
-  
+
 end
 
 class Psql
 
   class PsqlQuit < Exception; end
   class InvalidCommand < Exception; attr_accessor :command; end
-  
+
   attr_accessor :user, :password, :dsn, :connection, :output, :align_columns
 
   SQL_LAMBDA = lambda do |psql, sql, keyword, object|
@@ -44,16 +44,16 @@ class Psql
   INVALID_LAMBDA = lambda do |psql, cmd|
     psql.output.puts "Invalid Command #{cmd}. Try \\? for help."
   end
-  
+
   INVALID_COMMAND = Command.new('invalid',
                                 //,
                                 '',
                                 INVALID_LAMBDA)
-  
+
   #FIXME: improve regexes to eliminate /cd, /d, /o pairs
 
   META_COMMANDS = []
-  
+
   [[
     'a',
     /^\s*\\a\b/,
@@ -93,7 +93,7 @@ class Psql
    [
     'f',
     /^\s*\\f\s+(.*)/,
-    '\f [sep]        set or show field separator', 
+    '\f [sep]        set or show field separator',
     lambda { |psql, fs| psql.set_field_separator(fs) }
    ],
    [
@@ -151,15 +151,15 @@ class Psql
     lambda { |psql| psql.help }
    ]
   ].each { |a| META_COMMANDS << Command.new(*a) }
-  
+
   # FIXME: Netezza specific
-  
-  DESCRIBE_TABLE_SQL = 
+
+  DESCRIBE_TABLE_SQL =
     "select column_name as \"Column\", type_name as \"Type\", case nullable when 0 then '' else 'not null' end as \"Modifiers\" from _v_sys_columns where table_name = ? order by ordinal_position;"
 
   DESCRIBE_TABLES_SQL =
     "select database, objname as name, objtype as \"type\", owner from _v_sys_relation where objtype in ( 'TABLE', 'VIEW', 'SEQUENCE' ) order by 2;"
-  
+
   def initialize(args)
     user = nil
     get_options(args)
@@ -202,13 +202,13 @@ class Psql
     end
     show_field_separator
   end
-  
+
   def help
     META_COMMANDS.each do |cmd|
       output.puts cmd.help if cmd.help
     end
   end
-  
+
   def connect(dsn=nil)
     begin
       self.connection = ODBC::Environment.new().connect(dsn || DSN, user, password)
@@ -227,7 +227,7 @@ class Psql
       self.output = File.open(file,'w')
     end
   end
-  
+
   def get_options(args)
     opts = OptionParser.new
     opts.on("-d", "--dsn DSN") { |d| self.dsn = d }
@@ -235,7 +235,7 @@ class Psql
     opts.on("-w", "--password") { self.password = get_password() }
     opts.parse(*args)
   end
-  
+
   def get_password
     ask("Password: ") { |q| q.echo = false }
   end
@@ -259,7 +259,7 @@ class Psql
     display_me = widths.map { |w| '-' * w }
     output.puts "-" + display_me.join('-+-') + "-"
   end
-  
+
   def print_header(columns, widths)
     print_array(columns.map {|c| c.name}, widths)
     print_bar(widths) if @align_columns
@@ -269,7 +269,7 @@ class Psql
     label = stmt.nrows == 1 ? 'row' : 'rows'
     output.puts "(#{stmt.nrows} #{label})"
   end
-    
+
   class Rows
 
     def initialize(stmt, psql)
@@ -279,12 +279,11 @@ class Psql
       @psql = psql
     end
 
-    
     def display_widths
       @display_widths ||= get_display_widths
       @display_widths
     end
-    
+
     def columns
       (0...@stmt.ncols).map {|i| @stmt.column(i) }
     end
@@ -300,13 +299,13 @@ class Psql
       end
       @rows_for_alignment || []
     end
-    
+
     def each
       @rows_for_alignment ||= prefetch_rows
       @rows_for_alignment.each do |row|
         yield(row)
       end
-      
+
       while row = @stmt.fetch()
         yield(row)
       end
@@ -349,7 +348,7 @@ class Psql
     #
     ENV['LESS'] = 'FX' # equivalent to: less -FX
     pager = ENV['PAGER'] || 'less'
-    f = IO.popen(pager, 'w') 
+    f = IO.popen(pager, 'w')
     begin
       self.output = f
       _print_rows(stmt, opts)
@@ -359,7 +358,7 @@ class Psql
       f.close
     end
   end
-  
+
   def print_rows(stmt, opts={})
     if self.output == $stdout and $stdout.isatty
       _page_rows(stmt, opts)
@@ -385,7 +384,7 @@ class Psql
     pp o
     puts
   end
-  
+
   def inspect_statement(stmt)
     inspect_methods(stmt, "STATEMENT")
     inspect_attributes(stmt.ncols, "NCOLS")
@@ -466,7 +465,7 @@ class Psql
       end
     end
   end
-  
+
   def get_metacommand(line)
     META_COMMANDS.each do |cmd|
       md = cmd.regex.match(line)
@@ -490,7 +489,7 @@ class Psql
     end
     raise PsqlQuit.new()
   end
-  
+
   def get_command_arguments_pairs(input)
     pairs = []
     stmts = input || []
@@ -510,13 +509,13 @@ class Psql
       input = File.open(file).read()
     rescue Errno::ENOENT
       $stderr.puts "#{file}: No such file or directory"
-    end    
+    end
     pairs = get_command_arguments_pairs(@parser.parse(input))
     pairs.each do |cmd, args|
       cmd.action.call(self, *args)
     end
   end
-  
+
   def repl
     loop do
       begin
@@ -535,7 +534,7 @@ class Psql
       end
     end
   end
-  
+
 end
 
 if $0 == __FILE__
