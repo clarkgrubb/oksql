@@ -189,7 +189,10 @@ class Psql
   end
 
   def set_field_separator(fs)
-    if fs[0..0] == "'"
+    if fs == '\t'
+      # HACK: this is not psql behavior
+      @field_separator = "\t"
+    elsif fs[0..0] == "'"
       lexer = SqlLex.new()
       token, value, _, _ = lexer.lex_string(fs[1..-1])
       if :open == token
@@ -199,6 +202,7 @@ class Psql
       end
     else
       @field_separator = fs.split.first
+      @field_separator = '' if @field_separator.nil?
     end
     show_field_separator
   end
