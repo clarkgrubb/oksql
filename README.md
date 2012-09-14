@@ -15,6 +15,8 @@ PostgreSQL.
 
 ## To Do ##
 
+* set fieldsep as tab
+* use tilde in file name for \o
 * (DONE) use optparse and process arguments like psql does
 * (DONE) format the output of a select like psql does
 * (DONE) don't exit upon SQL errors
@@ -63,6 +65,7 @@ PostgreSQL.
 * cleanup meta_command regexes
 * cleanup signature of execute_sql
 * test under mac
+* double quoted identifiers
 
 * extensions
  * \buffer <name>  # header: column names and types

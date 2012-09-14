@@ -20,7 +20,7 @@ class SqlParse
       'grant' => :grant,
       'revoke' => :revoke,
     }
-    
+
     def initialize()
       @open = false
       @tokens = []
@@ -52,7 +52,7 @@ class SqlParse
       end
       retval || ''
     end
-    
+
     def open?
       not :meta_command == keyword and
         (
@@ -73,7 +73,7 @@ class SqlParse
       end
       a
     end
-    
+
     def open_sequence
       a = open_parens
       a << @open_quote if @open_quote
@@ -83,9 +83,9 @@ class SqlParse
     def open_delimiter
       open_sequence.last
     end
-    
+
   end
-  
+
   def initialize()
     @lexer = SqlLex.new()
   end
@@ -110,7 +110,7 @@ class SqlParse
       when :open
         stmt.open_quote = value
         break
-      when :semicolon 
+      when :semicolon
         stmt.semicolon_terminated = true
         stmts << stmt
         stmt = nil
@@ -119,5 +119,5 @@ class SqlParse
     stmts << stmt if stmt
     stmts
   end
-  
+
 end

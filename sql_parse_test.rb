@@ -23,7 +23,7 @@ class SqlParseTest < Test::Unit::TestCase
   def test_02
     stmts = @sql.parse(" select 'foo'; insert into foo values ( 3 ); ")
     assert_equal(2, stmts.size)
-    
+
     stmt1 = stmts[0]
     assert_equal(:select, stmt1.keyword)
     assert(!stmt1.open?)
@@ -66,7 +66,7 @@ class SqlParseTest < Test::Unit::TestCase
     assert_equal(:select, stmt.keyword)
     assert_equal(" SELECT * from foo;", stmt.raw)
   end
-  
+
   # open string
   def test_05
     stmts = @sql.parse(" select 'foo bar")
@@ -76,7 +76,7 @@ class SqlParseTest < Test::Unit::TestCase
     assert_equal("'", stmt.open_delimiter)
     assert_equal(:select, stmt.keyword)
   end
-  
+
   # open quoted name
   def test_06
     stmts = @sql.parse(' create table "foo bar')
@@ -96,7 +96,7 @@ class SqlParseTest < Test::Unit::TestCase
     assert_equal('(', stmt.open_delimiter)
     assert_equal(:create, stmt.keyword)
   end
-    
+
   # statement with balanced parens
   def test_08
     stmts = @sql.parse("select * from foo where a in ( select b from bar );")
@@ -105,7 +105,7 @@ class SqlParseTest < Test::Unit::TestCase
     assert(!stmt.open?)
     assert_equal(:select, stmt.keyword)
   end
-    
+
   # two statements, last is open string
   def test_09
     stmts = @sql.parse(" select 7; insert into foo ")
@@ -158,5 +158,37 @@ class SqlParseTest < Test::Unit::TestCase
     assert_equal(:select, stmt2.keyword)
     assert_equal(" select 'foo';", stmt2.raw)
   end
-  
+
+  # statement with nested parens
+  def test_13
+    stmts = @sql.parse("select * from foo where a in " +
+                       "( select b from bar where c in (1, 2));")
+    assert_equal(1, stmts.size)
+    stmt = stmts.first
+    assert(!stmt.open?)
+    assert_equal(:select, stmt.keyword)
+  end
+
+  # statement with two sets of parens, not nested
+  def test_14
+    stmts = @sql.parse("select * from foo where a in (1, 2) and b in (3, 4);")
+    assert_equal(1, stmts.size)
+    stmt = stmts.first
+    assert(!stmt.open?)
+    assert_equal(:select, stmt.keyword)
+  end
+
+  # regression test for a bug
+  def test_15
+    stmts = @sql.parse("select count(distinct studio_guid) " +
+                       "from fact_ltv_revenue_day f " +
+                       "join dim_studio_content d " +
+                       "on lower(f.studio_guid) = " +
+                       "lower(d.studio_article_guid);")
+    assert_equal(1, stmts.size)
+    stmt = stmts.first
+    assert(!stmt.open?)
+    assert_equal(:select, stmt.keyword)
+  end
+
 end

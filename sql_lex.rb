@@ -9,10 +9,12 @@ class SqlLex
   FLOAT_REGEX = '-?[0-9]+\.[0-9]*|-?[0-9]*\.[0-9]+'
   UNKNOWN_REGEX = '\S+'
   META_COMMAND_REGEX = '\\\\.*?\s;|\\\\.*$'
-  
+
+  # TODO: support double quoted identifiers
+
   def initialize()
   end
-  
+
   def lex_comment(input)
     case input
     when /\A(\s*)(--.*\n?)/
@@ -36,6 +38,8 @@ class SqlLex
       return :float, $2, $1 + $2, $'
     when /\A(\s*)(#{INTEGER_REGEX})/
       return :integer, $2, $1 + $2, $'
+    when /\A(\s*)(\.)/
+      return :identifier_separator, $2, $1 + $2, $'
     when /\A(\s*)\(/
       postmatch = $'
       return :open_paren, '(', $1 + '(', postmatch
@@ -61,11 +65,11 @@ class SqlLex
   def lex_quoted_variable(input)
     lex_delimited_token(input, '"', :quoted_variable)
   end
-  
+
   def lex_string(input)
     lex_delimited_token(input, "'", :string)
   end
-  
+
   def lex_delimited_token(input, delimiter, token)
     value = ''
     raw = ''
@@ -87,7 +91,7 @@ class SqlLex
       end
     end
   end
-  
+
   def lex(input)
     loop do
       token, value, raw, rest = lex_comment(input)
@@ -107,10 +111,12 @@ class SqlLex
       token, value, raw, new_rest = lex(rest)
       a << [token, value, raw]
       break if [:end, :open, :error].include?(token)
-      raise "software errror: infinite loop on input: #{rest}" if new_rest == rest
+      if new_rest == rest
+        raise "software errror: infinite loop on input: #{rest}"
+      end
       rest = new_rest
     end
     a
   end
-  
+
 end
