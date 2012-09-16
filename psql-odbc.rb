@@ -8,7 +8,7 @@ require 'pp'
 require 'readline'
 require File.dirname(__FILE__) + '/sql_parse.rb'
 
-DSN = 'NZSQL'
+DSN = 'PRD_EDW'
 HBAR = '*' * 50
 ROWS_FOR_ALIGNMENT = 100
 
@@ -375,6 +375,10 @@ class Psql
     /\A\s*select/i.match(line)
   end
 
+  def explain?(line)
+    /\A\s*explain/i.match(line)
+  end
+
   def inspect_methods(o, name)
     puts name + ' METHODS'
     puts HBAR
@@ -432,11 +436,11 @@ class Psql
     end
     begin
       stmt = connection.run(sql, *bind_vars)
-      # inspect_statement(stmt)
+      #inspect_statement(stmt)
       if block_given?
         yield(stmt, sql, *bind_vars)
       else
-        print_rows(stmt) if select?(sql)
+        print_rows(stmt) if select?(sql) or explain?(sql)
       end
       print_status(stmt, keyword, object)
     rescue ODBC::Error => e

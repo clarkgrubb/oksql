@@ -15,5 +15,5 @@ class PsqlTest < Test::Unit::TestCase
   def test_01
     assert(true)
   end
-  
+
 end

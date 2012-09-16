@@ -19,6 +19,7 @@ class SqlParse
       'drop' => :drop,
       'grant' => :grant,
       'revoke' => :revoke,
+      'explain' => :explain,
     }
 
     def initialize()
