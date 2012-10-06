@@ -379,6 +379,10 @@ class Psql
     /\A\s*explain/i.match(line)
   end
 
+  def show?(line)
+    /\A\s*show/i.match(line)
+  end
+
   def inspect_methods(o, name)
     puts name + ' METHODS'
     puts HBAR
@@ -440,7 +444,7 @@ class Psql
       if block_given?
         yield(stmt, sql, *bind_vars)
       else
-        print_rows(stmt) if select?(sql) or explain?(sql)
+        print_rows(stmt) if select?(sql) or explain?(sql) or show?(sql)
       end
       print_status(stmt, keyword, object)
     rescue ODBC::Error => e
