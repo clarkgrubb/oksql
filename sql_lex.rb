@@ -3,7 +3,7 @@
 class SqlLex
 
   # These are not precise
-  KEYWORD_OR_VARIABLE_REGEX = '[a-zA-Z][a-zA-Z_0-9]*'
+  KEYWORD_OR_VARIABLE_REGEX = '[a-zA-Z_][a-zA-Z_0-9]*'
   OPERATOR_REGEX = '[+\-*\/%\|,]+'
   INTEGER_REGEX = '-?[0-9]+'
   FLOAT_REGEX = '-?[0-9]+\.[0-9]*|-?[0-9]*\.[0-9]+'
