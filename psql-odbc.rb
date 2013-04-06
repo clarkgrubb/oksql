@@ -30,7 +30,8 @@ class Psql
   class PsqlQuit < Exception; end
   class InvalidCommand < Exception; attr_accessor :command; end
 
-  attr_accessor :user, :password, :dsn, :connection, :output, :align_columns
+  attr_accessor :user, :password, :dsn, :connection, :output,
+  :align_columns, :footer
 
   SQL_LAMBDA = lambda do |psql, sql, keyword, object|
     psql.execute_sql(sql, keyword, object)
@@ -127,6 +128,18 @@ class Psql
     lambda { |psql| psql.output = $stdout }
    ],
    [
+    'pset',
+    /^\s*\\pset\s+footer\s+on/,
+    nil,
+    lambda { |psql| psql.footer = true }
+   ],
+   [
+    'pset',
+    /^\s*\\pset\s+footer\s+off/,
+    nil,
+    lambda { |psql| psql.footer = false }
+   ],
+   [
     'q',
     /^\s*\\q\b/,
     '\q              quit',
@@ -168,6 +181,7 @@ class Psql
     @show_only_rows = false
     @align_columns = true
     @field_separator = '|'
+    @footer = true
   end
 
   def toggle_show_only_rows
@@ -339,7 +353,7 @@ class Psql
     rows.each do |row|
       print_array(row, rows.display_widths)
     end
-    print_footer(stmt) unless opts[:suppress_footer] or @show_only_rows
+    print_footer(stmt) unless opts[:suppress_footer] or @show_only_rows or not @footer
     output.puts
     output.flush
   end

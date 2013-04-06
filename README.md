@@ -15,8 +15,8 @@ PostgreSQL.
 
 ## To Do ##
 
-* set fieldsep as tab
-* use tilde in file name for \o
+* (DONE) set fieldsep as tab
+* (DONE) use tilde in file name for \o
 * (DONE) use optparse and process arguments like psql does
 * (DONE) format the output of a select like psql does
 * (DONE) don't exit upon SQL errors
