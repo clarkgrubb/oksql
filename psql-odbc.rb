@@ -375,6 +375,10 @@ class Psql
     /\A\s*select/i.match(line)
   end
 
+  def with?(line)
+    /\A\s*with/i.match(line)
+  end
+
   def explain?(line)
     /\A\s*explain/i.match(line)
   end
@@ -444,7 +448,9 @@ class Psql
       if block_given?
         yield(stmt, sql, *bind_vars)
       else
-        print_rows(stmt) if select?(sql) or explain?(sql) or show?(sql)
+        if select?(sql) or explain?(sql) or show?(sql) or with?(sql)
+          print_rows(stmt)
+        end
       end
       print_status(stmt, keyword, object)
     rescue ODBC::Error => e
