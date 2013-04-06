@@ -490,12 +490,21 @@ class Psql
     return INVALID_COMMAND, [bad_command], line
   end
 
+  def get_raw_line(continuation_char)
+    if $stdin.tty?
+      Readline.readline("#{user}#{continuation_char}> ", true)
+    else
+      $stdin.gets
+    end
+  end
+
   def get_parsed_line
     line = ''
     continuation_char = '='
-    while part = Readline.readline("#{user}#{continuation_char}> ", true)
+    while part = get_raw_line(continuation_char)
       line += part + "\n"
       stmts = @parser.parse(line)
+      raise PsqlQuit.new() if stmts.empty? and not $stdin.tty?
       return stmts if stmts.empty? or not stmts.last.open?
       continuation_char = stmts.last.open_delimiter || '-'
     end
