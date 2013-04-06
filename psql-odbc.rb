@@ -228,7 +228,7 @@ class Psql
       cmd = md[1]
       self.output = IO.popen(cmd, mode='w')
     else
-      self.output = File.open(file,'w')
+      self.output = File.open(File.expand_path(file),'w')
     end
   end
 
@@ -533,7 +533,7 @@ class Psql
 
   def execute_file(file)
     begin
-      input = File.open(file).read()
+      input = File.open(File.expand_path(file)).read()
     rescue Errno::ENOENT
       $stderr.puts "#{file}: No such file or directory"
     end
