@@ -1,9 +1,9 @@
 require 'test/unit'
-require File.dirname(__FILE__) + '/psql-odbc.rb'
+require File.dirname(__FILE__) + '/oksql.rb'
 
-DSN = ENV['PSQL_ODBC_TEST_DSN']
+DSN = ENV['OKSQL_TEST_DSN']
 unless DSN
-  raise Exception.new("PSQL_ODBC_TEST_DSN env variable not set")
+  raise Exception.new("OKSQL_TEST_DSN env variable not set")
 end
 PSQL = Psql.new(DSN)
 
