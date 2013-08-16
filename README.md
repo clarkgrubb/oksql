@@ -12,7 +12,7 @@ Ruby and Rubygems should already be installed.  On Ubuntu run
 
 On Mac OS X you can do the following if Homebrew is installed:
 
-    $ sudo make setup.brew
+    $ make setup.brew
 
 On either system this will install the necessary Ruby gems:
 
@@ -25,5 +25,3 @@ You can install `oksql` in /usr/local/bin by running
 # HOW TO RUN: NETEZZA
 
     $ oksql
-
-# HOW TO RUN: SQL SERVER
