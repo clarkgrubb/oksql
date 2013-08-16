@@ -8,7 +8,7 @@ require 'pp'
 require 'readline'
 require File.dirname(__FILE__) + '/sql_parse.rb'
 
-DSN = 'PRD_EDW'
+DSN = 'DEV_ALGO'
 HBAR = '*' * 50
 ROWS_FOR_ALIGNMENT = 100
 
@@ -248,7 +248,7 @@ class Psql
 
   def get_options(args)
     opts = OptionParser.new
-    opts.on("-d", "--dsn DSN") { |d| self.dsn = d }
+    opts.on("-d", "--dsn DSN") { |d| self.dsn = d.strip }
     opts.on("-U", "--username USER") { |u| self.user = u }
     opts.on("-w", "--password") { self.password = get_password() }
     opts.parse(*args)
