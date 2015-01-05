@@ -5,9 +5,6 @@ SHELL := bash
 .DELETE_ON_ERROR:
 .SUFFIXES:
 
-.DELETE_ON_ERROR:
-.SUFFIXES:
-
 TEST_DSN := NZSQL
 PWD := $(shell pwd)
 INSTALL_DIR ?= /usr/local/bin
