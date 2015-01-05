@@ -1,5 +1,9 @@
-SHELL := /bin/bash
-.SHELLFLAGS :=  -o pipefail
+MAKEFLAGS += --warn-undefined-variables
+SHELL := bash
+.SHELLFLAGS := -eu -o pipefail -c
+.DEFAULT_GOAL := all
+.DELETE_ON_ERROR:
+.SUFFIXES:
 
 .DELETE_ON_ERROR:
 .SUFFIXES:
